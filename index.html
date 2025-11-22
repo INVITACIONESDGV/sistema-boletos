@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Venta de Boletos</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f28;
+            --bg-card: #252d38;
+            --text-primary: #e8eaed;
+            --text-secondary: #9ca3af;
+            --accent-add: #10b981;
+            --accent-delete: #ef4444;
+            --accent-export: #3b82f6;
+            --border: #374151;
+        }
+
+        body {
+            font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        #root {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .logo-container {
+            margin-bottom: 16px;
+        }
+
+        .logo-img {
+            max-width: 180px;
+            height: auto;
+            filter: drop-shadow(0 4px 12px rgba(255, 140, 0, 0.3));
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--text-secondary);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-card.money .stat-value {
+            color: var(--accent-add);
+        }
+
+        .stat-card.deleted .stat-value {
+            color: var(--accent-delete);
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            font-family: 'Work Sans', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-add {
+            background: var(--accent-add);
+            color: white;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-add:hover {
+            background: #059669;
+            box-shadow: 0 6px 30px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-delete {
+            background: var(--bg-card);
+            color: var(--accent-delete);
+            border: 2px solid var(--accent-delete);
+        }
+
+        .btn-delete:hover {
+            background: var(--accent-delete);
+            color: white;
+        }
+
+        .btn-export {
+            background: var(--accent-export);
+            color: white;
+            padding: 18px;
+            font-size: 16px;
+        }
+
+        .btn-export:hover {
+            background: #2563eb;
+        }
+
+        .btn-icon {
+            font-size: 24px;
+        }
+
+        .activity-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .activity-header {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .activity-item.added {
+            border-left: 3px solid var(--accent-add);
+        }
+
+        .activity-item.deleted {
+            border-left: 3px solid var(--accent-delete);
+        }
+
+        .activity-text {
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .activity-time {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            animation: scaleIn 0.3s ease;
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .modal-text {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+
+        .modal-btn-cancel {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .modal-btn-cancel:hover {
+            background: var(--bg-primary);
+        }
+
+        .modal-btn-confirm {
+            background: var(--accent-delete);
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #dc2626;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        /* Scrollbar personalizado */
+        .activity-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .activity-list::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 3px;
+        }
+
+        .activity-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .activity-list::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [tickets, setTickets] = useState([]);
+            const [showModal, setShowModal] = useState(false);
+            const TICKET_PRICE = 50;
+
+            // Cargar datos del localStorage al iniciar
+            useEffect(() => {
+                const savedTickets = localStorage.getItem('ticketData');
+                if (savedTickets) {
+                    setTickets(JSON.parse(savedTickets));
+                }
+            }, []);
+
+            // Guardar en localStorage cada vez que cambian los tickets
+            useEffect(() => {
+                localStorage.setItem('ticketData', JSON.stringify(tickets));
+            }, [tickets]);
+
+            const addTicket = () => {
+                const newTicket = {
+                    id: Date.now(),
+                    type: 'added',
+                    timestamp: new Date().toISOString(),
+                    amount: TICKET_PRICE
+                };
+                setTickets([newTicket, ...tickets]);
+            };
+
+            const confirmDelete = () => {
+                const newTicket = {
+                    id: Date.now(),
+                    type: 'deleted',
+                    timestamp: new Date().toISOString(),
+                    amount: -TICKET_PRICE
+                };
+                setTickets([newTicket, ...tickets]);
+                setShowModal(false);
+            };
+
+            const calculateStats = () => {
+                let sold = 0;
+                let deleted = 0;
+                let total = 0;
+
+                tickets.forEach(ticket => {
+                    if (ticket.type === 'added') {
+                        sold++;
+                        total += TICKET_PRICE;
+                    } else if (ticket.type === 'deleted') {
+                        deleted++;
+                        total -= TICKET_PRICE;
+                    }
+                });
+
+                return { sold, deleted, total };
+            };
+
+            const formatTime = (timestamp) => {
+                const date = new Date(timestamp);
+                return date.toLocaleString('es-MX', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            const exportToExcel = () => {
+                const stats = calculateStats();
+                
+                // Hoja 1: Resumen
+                const summary = [
+                    ['Sistema de Venta de Boletos'],
+                    ['Fecha de Exportación', new Date().toLocaleString('es-MX')],
+                    [],
+                    ['RESUMEN'],
+                    ['Boletos Vendidos', stats.sold],
+                    ['Boletos Eliminados', stats.deleted],
+                    ['Boletos Netos', stats.sold - stats.deleted],
+                    ['Total en Dinero', `$${stats.total.toFixed(2)} MXN`],
+                    ['Precio por Boleto', `$${TICKET_PRICE} MXN`]
+                ];
+
+                // Hoja 2: Historial detallado
+                const history = [
+                    ['Fecha y Hora', 'Acción', 'Monto', 'ID']
+                ];
+                
+                tickets.forEach(ticket => {
+                    history.push([
+                        formatTime(ticket.timestamp),
+                        ticket.type === 'added' ? 'Boleto Agregado' : 'Boleto Eliminado',
+                        ticket.type === 'added' ? `$${TICKET_PRICE}` : `-$${TICKET_PRICE}`,
+                        ticket.id
+                    ]);
+                });
+
+                // Crear libro de Excel
+                const wb = XLSX.utils.book_new();
+                const ws1 = XLSX.utils.aoa_to_sheet(summary);
+                const ws2 = XLSX.utils.aoa_to_sheet(history);
+
+                XLSX.utils.book_append_sheet(wb, ws1, 'Resumen');
+                XLSX.utils.book_append_sheet(wb, ws2, 'Historial');
+
+                // Descargar archivo
+                const fileName = `boletos_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+            };
+
+            const stats = calculateStats();
+
+            return (
+                <>
+                    <div className="header">
+                        <div className="logo-container">
+                            <img src="logo.png" alt="Pandaemonium Logo" className="logo-img" />
+                        </div>
+                        <h1>Sistema de Boletos</h1>
+                        <p>Gestión rápida de venta</p>
+                    </div>
+
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <div className="stat-label">Boletos Vendidos</div>
+                            <div className="stat-value">{stats.sold}</div>
+                        </div>
+                        <div className="stat-card money">
+                            <div className="stat-label">Total Dinero</div>
+                            <div className="stat-value">${stats.total}</div>
+                        </div>
+                        <div className="stat-card deleted">
+                            <div className="stat-label">Eliminados</div>
+                            <div className="stat-value">{stats.deleted}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Netos</div>
+                            <div className="stat-value">{stats.sold - stats.deleted}</div>
+                        </div>
+                    </div>
+
+                    <div className="action-buttons">
+                        <button className="btn btn-add" onClick={addTicket}>
+                            <span className="btn-icon">+</span>
+                            Agregar 1 Boleto ($50 MXN)
+                        </button>
+                        <button 
+                            className="btn btn-delete" 
+                            onClick={() => setShowModal(true)}
+                            disabled={stats.sold - stats.deleted <= 0}
+                        >
+                            <span className="btn-icon">−</span>
+                            Eliminar Boleto
+                        </button>
+                        <button className="btn btn-export" onClick={exportToExcel}>
+                            <span className="btn-icon">📊</span>
+                            Exportar a Excel
+                        </button>
+                    </div>
+
+                    <div className="activity-section">
+                        <div className="activity-header">Registro de Actividad</div>
+                        <div className="activity-list">
+                            {tickets.length === 0 ? (
+                                <div className="empty-state">
+                                    <div className="empty-icon">📋</div>
+                                    <p>No hay actividad registrada aún</p>
+                                </div>
+                            ) : (
+                                tickets.map(ticket => (
+                                    <div 
+                                        key={ticket.id} 
+                                        className={`activity-item ${ticket.type}`}
+                                    >
+                                        <div className="activity-text">
+                                            {ticket.type === 'added' 
+                                                ? `✅ 1 boleto agregado – $${TICKET_PRICE} MXN`
+                                                : `❌ 1 boleto eliminado – -$${TICKET_PRICE} MXN`
+                                            }
+                                        </div>
+                                        <div className="activity-time">
+                                            {formatTime(ticket.timestamp)}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {showModal && (
+                        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                                <div className="modal-title">⚠️ Confirmar Eliminación</div>
+                                <div className="modal-text">
+                                    Se eliminará un boleto y se restará $50 MXN del total. 
+                                    ¿Estás seguro de que quieres continuar?
+                                </div>
+                                <div className="modal-buttons">
+                                    <button 
+                                        className="modal-btn modal-btn-cancel"
+                                        onClick={() => setShowModal(false)}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        className="modal-btn modal-btn-confirm"
+                                        onClick={confirmDelete}
+                                    >
+                                        Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
