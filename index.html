@@ -362,6 +362,48 @@
             opacity: 0.5;
         }
 
+        .password-input {
+            width: 100%;
+            padding: 16px;
+            background: var(--bg-primary);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 18px;
+            font-family: 'IBM Plex Mono', monospace;
+            text-align: center;
+            letter-spacing: 8px;
+            margin-bottom: 16px;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: var(--accent-add);
+        }
+
+        .password-input::placeholder {
+            letter-spacing: normal;
+            opacity: 0.5;
+        }
+
+        .password-error {
+            color: var(--accent-delete);
+            font-size: 14px;
+            margin-top: -8px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .password-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+        }
+
         /* Scrollbar personalizado */
         .activity-list::-webkit-scrollbar {
             width: 6px;
@@ -392,7 +434,10 @@
             const [tickets, setTickets] = useState([]);
             const [showModal, setShowModal] = useState(false);
             const [showResetModal, setShowResetModal] = useState(false);
+            const [resetPassword, setResetPassword] = useState('');
+            const [passwordError, setPasswordError] = useState(false);
             const TICKET_PRICE = 50;
+            const RESET_PASSWORD = 'PDM0110318'; // 🔐 CAMBIA ESTA CONTRASEÑA AQUÍ
 
             // Cargar datos del localStorage al iniciar
             useEffect(() => {
@@ -429,9 +474,21 @@
             };
 
             const confirmReset = () => {
-                setTickets([]);
-                localStorage.removeItem('ticketData');
+                if (resetPassword === RESET_PASSWORD) {
+                    setTickets([]);
+                    localStorage.removeItem('ticketData');
+                    setShowResetModal(false);
+                    setResetPassword('');
+                    setPasswordError(false);
+                } else {
+                    setPasswordError(true);
+                }
+            };
+
+            const closeResetModal = () => {
                 setShowResetModal(false);
+                setResetPassword('');
+                setPasswordError(false);
             };
 
             const calculateStats = () => {
@@ -620,9 +677,9 @@
                     )}
 
                     {showResetModal && (
-                        <div className="modal-overlay" onClick={() => setShowResetModal(false)}>
+                        <div className="modal-overlay" onClick={closeResetModal}>
                             <div className="modal" onClick={(e) => e.stopPropagation()}>
-                                <div className="modal-title">🔄 Confirmar Reset</div>
+                                <div className="modal-title">🔐 Confirmar Reset</div>
                                 <div className="modal-text">
                                     <strong>⚠️ ADVERTENCIA:</strong> Esto borrará TODOS los datos:
                                     <br/><br/>
@@ -630,12 +687,31 @@
                                     • {stats.deleted} boletos eliminados<br/>
                                     • Todo el historial de actividad<br/>
                                     <br/>
-                                    Esta acción NO se puede deshacer. ¿Estás completamente seguro?
+                                    Para continuar, ingresa la contraseña de seguridad:
                                 </div>
+                                <input
+                                    type="password"
+                                    className="password-input"
+                                    placeholder="Contraseña"
+                                    value={resetPassword}
+                                    onChange={(e) => {
+                                        setResetPassword(e.target.value);
+                                        setPasswordError(false);
+                                    }}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') confirmReset();
+                                    }}
+                                    autoFocus
+                                />
+                                {passwordError && (
+                                    <div className="password-error">
+                                        ❌ Contraseña incorrecta
+                                    </div>
+                                )}
                                 <div className="modal-buttons">
                                     <button 
                                         className="modal-btn modal-btn-cancel"
-                                        onClick={() => setShowResetModal(false)}
+                                        onClick={closeResetModal}
                                     >
                                         Cancelar
                                     </button>
@@ -643,9 +719,10 @@
                                         className="modal-btn modal-btn-confirm"
                                         onClick={confirmReset}
                                     >
-                                        Sí, Borrar Todo
+                                        Confirmar Reset
                                     </button>
                                 </div>
+                                
                             </div>
                         </div>
                     )}
